@@ -24,26 +24,26 @@ func main() {
 	var day int
 	var part int
 
+	var complete bool
+
 	flag.IntVar(&year, "y", 0, "Year to run the challenge for. 0 for current year. Defaults to current year.")
 	flag.IntVar(&day, "d", 0, "Day to run the challenge for. 0 for today. Defaults to today.")
-	flag.IntVar(&part, "p", 0, "Part of the days challenge. 0 for both. Defaults to latest.")
+	flag.IntVar(&part, "p", 0, "Part of the days challenge. 0 for both. Defaults to both.")
 
-	var generate bool
-	flag.BoolVar(&generate, "generate", false, "Run the generator or not. Will bootstrap today's challenge")
+	flag.BoolVar(&complete, "complete", false, "Run all known solutions of a year. Defaults to false")
+
+	var benchmark bool
+	flag.BoolVar(&benchmark, "benchmark", false, "Run the challenge with benchmarking turned on. Defaults to off.")
 
 	flag.Parse()
 
-	now := time.Now()
-
-	if day == 0 {
-		// If the today is not a day for the advent of code challenge, throw an error
-		if now.Month() != 12 {
-			log.Fatal("[!] Day is not specified and today is not a advent of code day.")
-		}
-		// Set day to today
-		day = now.Day()
+	// Check if complete is set together with day and parts
+	if complete && (day != 0 || part != 0) {
+		log.Fatal("[!] The complete flag cannot be used with the day and part flags.")
 	}
 
+	// Configure the autoloaded day, year and parts and validate input
+	now := time.Now()
 	if year == 0 {
 		// Set year to last edition
 		if now.Month() == 12 {
@@ -52,59 +52,124 @@ func main() {
 			year = now.Year() - 1
 		}
 	}
-
 	if year > now.Year() {
 		log.Fatal("[!] Requesting year in the future")
 	}
 
-	if day > 24 {
-		log.Fatal("[!] Requesting day outside the challenge interval")
+	if !complete {
+		if day == 0 {
+			// If the today is not a day for the advent of code challenge, throw an error
+			if now.Month() != 12 {
+				log.Fatal("[!] Day is not specified and today is not a advent of code day.")
+			}
+			// Set day to today
+			day = now.Day()
+		}
+
+		if day > 24 {
+			log.Fatal("[!] Requesting day outside the challenge interval")
+		}
+
+		if year == now.Year() && now.Month() == 12 && (day > now.Day() || now.Hour() < 6) {
+			log.Fatal("[!] Requesting unreleased challenge")
+		}
 	}
 
-	if year == now.Year() && now.Month() == 12 && (day > now.Day() || now.Hour() < 6) {
-		log.Fatal("[!] Requesting unreleased challenge")
-	}
-
+	var parts []int
 	if part == 0 {
-		fmt.Printf("Running both parts for day %v\n", day)
+		parts = []int{0, 1}
 	} else {
-		fmt.Printf("Running part %v for day %v\n", part, day)
+		parts = []int{part}
 	}
 
-	if part == 0 {
-		answer, err := runChallenge(year, day, 0)
-		if err != nil {
-			log.Fatalf("[!] An error occurred when retrieving answer of the day: %v\n", err)
+	if complete {
+		var totalTime int64
+		totalTime = 0
+		for day, solutions := range getSolutions()[year] {
+			for part, _ := range solutions {
+				answer, err, t := runChallenge(year, day+1, part, benchmark)
+				if err != nil {
+					log.Fatalf("[!] An error occurred when retrieving the answer of the day: %v\n", err)
+				}
+				if benchmark {
+					totalTime += t
+					fmt.Printf("Answer year %v day %v part %v: %v\nCalculated in %v seconds\n", year, day, part, answer, float64(t)/1000000000)
+				} else {
+					fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part, answer)
+				}
+			}
+
+			if benchmark {
+				fmt.Printf("All solutions that have been run combined took %v seconds\n", float64(totalTime)/1000000000)
+			}
+		}
+	} else {
+		var totalTime int64
+		totalTime = 0
+		for _, part := range parts {
+			answer, err, t := runChallenge(year, day, part, benchmark)
+			if err != nil {
+				log.Fatalf("[!] An error occurred when retrieving the answer of the day: %v\n", err)
+			}
+			if benchmark {
+				totalTime += t
+				fmt.Printf("Answer year %v day %v part %v: %v\nCalculated in %v seconds\n", year, day, part, answer, float64(t)/1000000000)
+			} else {
+				fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part, answer)
+			}
 		}
 
-		fmt.Printf("Answer part 1: %v\n", answer)
-
-		answer, err = runChallenge(year, day, 1)
-		if err != nil {
-			log.Fatalf("[!] An error occurred when retrieving answer of the day: %v\n", err)
+		if benchmark {
+			fmt.Printf("All solutions that have been run combined took %v seconds\n", float64(totalTime)/1000000000)
 		}
-		fmt.Printf("Answer part 2: %v\n", answer)
 	}
+
+	//if part == 0 {
+	//	answer, err := runChallenge(year, day, 0)
+	//	if err != nil {
+	//		log.Fatalf("[!] An error occurred when retrieving answer of the day: %v\n", err)
+	//	}
+	//
+	//	fmt.Printf("Answer part 1: %v\n", answer)
+	//
+	//	answer, err = runChallenge(year, day, 1)
+	//	if err != nil {
+	//		log.Fatalf("[!] An error occurred when retrieving answer of the day: %v\n", err)
+	//	}
+	//	fmt.Printf("Answer part 2: %v\n", answer)
+	//}
 }
 
-func runChallenge(year int, day int, part int) (int, error) {
+// Runs the challenge. If benchmark is true, also record the time it takes to execute the solution function.
+// returns [answer] [error (if existent)] [time (-1 if benchmark == false)]
+func runChallenge(year int, day int, part int, benchmark bool) (int, error, int64) {
 	// Get input from the day
 	input, err := getInput(year, day)
 	if err != nil {
 		log.Fatalf("[!] An error occurred when retrieving the AOC input: %v\n", err)
 	}
 
-	solution := getChallengeFunction(year, day-1, part)
+	solution := getSolutions()[year][day-1][part]
 
-	return solution(input), nil
-}
-
-func getChallengeFunction(year int, day int, part int) func(input string) int {
-	solutions := map[int][][2]func(input string) int{
-		2023: year2023.GetSolutions(),
+	if benchmark {
+		answer, deltatime := benchmarkSolution(solution, input)
+		return answer, nil, deltatime
 	}
 
-	return solutions[year][day][part]
+	return solution(input), nil, -1
+}
+
+func benchmarkSolution(solution func(string) int, input string) (int, int64) {
+	before := time.Now()
+	answer := solution(input)
+	after := time.Now()
+	return answer, after.UnixNano() - before.UnixNano()
+}
+
+func getSolutions() map[int][][2]func(input string) int {
+	return map[int][][2]func(input string) int{
+		2023: year2023.GetSolutions(),
+	}
 }
 
 func getInput(year int, day int) (string, error) {
@@ -120,14 +185,14 @@ func getInput(year int, day int) (string, error) {
 		}
 		// Remove the last new line character
 		input = strings.TrimRight(input, "\n")
-		fmt.Println("Retrieved input from filesystem cache")
+		//fmt.Println("Retrieved input from filesystem cache")
 		return input, nil
 	} else {
 		err = nil
 	}
 
 	// It is not in our cache, get it from the advent of code servers.
-	fmt.Println("Getting input from the Advent of code servers.")
+	//fmt.Println("Getting input from the Advent of code servers.")
 	aocUrl := fmt.Sprintf("https://adventofcode.com/%v/day/%v/input", year, day)
 
 	req, _ := http.NewRequest("GET", aocUrl, nil)
