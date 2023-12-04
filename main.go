@@ -185,14 +185,12 @@ func getInput(year int, day int) (string, error) {
 		}
 		// Remove the last new line character
 		input = strings.TrimRight(input, "\n")
-		//fmt.Println("Retrieved input from filesystem cache")
 		return input, nil
 	} else {
 		err = nil
 	}
 
 	// It is not in our cache, get it from the advent of code servers.
-	//fmt.Println("Getting input from the Advent of code servers.")
 	aocUrl := fmt.Sprintf("https://adventofcode.com/%v/day/%v/input", year, day)
 
 	req, _ := http.NewRequest("GET", aocUrl, nil)

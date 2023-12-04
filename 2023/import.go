@@ -1,6 +1,6 @@
 package year2023
 
-import year2023 "bartwestenenk/aoc/2023/challenges"
+import year2023 "bartwestenenk/aoc/2023/solutions"
 
 func GetSolutions() [][2]func(input string) int {
 	solutions := [][2]func(input string) int{
