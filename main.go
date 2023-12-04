@@ -1,6 +1,7 @@
 package main
 
 import (
+	year2022 "bartwestenenk/aoc/2022"
 	year2023 "bartwestenenk/aoc/2023"
 	"bufio"
 	"flag"
@@ -85,23 +86,24 @@ func main() {
 	if complete {
 		var totalTime int64
 		totalTime = 0
-		for day, solutions := range getSolutions()[year] {
-			for part, _ := range solutions {
-				answer, err, t := runChallenge(year, day+1, part, benchmark)
+		for i, solutions := range getSolutions()[year] {
+			for part := range solutions {
+				day = i + 1
+				answer, err, t := runChallenge(year, day, part, benchmark)
 				if err != nil {
 					log.Fatalf("[!] An error occurred when retrieving the answer of the day: %v\n", err)
 				}
-				if benchmark {
-					totalTime += t
-					fmt.Printf("Answer year %v day %v part %v: %v\nCalculated in %v seconds\n", year, day, part, answer, float64(t)/1000000000)
+
+				if !benchmark {
+					fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part+1, answer)
 				} else {
-					fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part, answer)
+					totalTime += t
+					fmt.Printf("Calculated day %v p%v in %v seconds\n", day, part+1, float64(t)/1000000000)
 				}
 			}
-
-			if benchmark {
-				fmt.Printf("All solutions that have been run combined took %v seconds\n", float64(totalTime)/1000000000)
-			}
+		}
+		if benchmark {
+			fmt.Printf("All solutions that have been run combined took %v seconds\n", float64(totalTime)/1000000000)
 		}
 	} else {
 		var totalTime int64
@@ -111,12 +113,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("[!] An error occurred when retrieving the answer of the day: %v\n", err)
 			}
-			if benchmark {
-				totalTime += t
-				fmt.Printf("Answer year %v day %v part %v: %v\nCalculated in %v seconds\n", year, day, part, answer, float64(t)/1000000000)
+			if !benchmark {
+				fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part+1, answer)
 			} else {
-				fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part, answer)
+				totalTime += t
+				fmt.Printf("Calculated day %v p%v in %v seconds\n", day, part+1, float64(t)/1000000000)
 			}
+
 		}
 
 		if benchmark {
@@ -168,6 +171,7 @@ func benchmarkSolution(solution func(string) int, input string) (int, int64) {
 
 func getSolutions() map[int][][2]func(input string) int {
 	return map[int][][2]func(input string) int{
+		2022: year2022.GetSolutions(),
 		2023: year2023.GetSolutions(),
 	}
 }
@@ -226,5 +230,11 @@ func getInput(year int, day int) (string, error) {
 		return "", err
 	}
 
-	return string(body), nil
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		input += scanner.Text() + "\n"
+	}
+	// Remove the last new line character
+	input = strings.TrimRight(input, "\n")
+	return input, nil
 }
