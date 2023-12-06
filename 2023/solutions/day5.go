@@ -2,7 +2,6 @@ package year2023
 
 import (
 	"bartwestenenk/aoc/utils"
-	"fmt"
 	"strings"
 )
 
@@ -31,6 +30,42 @@ func (page almanacPage) getDestination(source int) int {
 		}
 	}
 	return source
+}
+
+// Takes in a source start, a range and returns a set of new ranges that are converted by this almanac page
+func (page almanacPage) getDestinationRange(sourceStart int, r int) [][2]int {
+	sourceEnd := sourceStart + r
+
+	var ranges [][2]int
+	for _, entry := range page.entries {
+		// Situation 1
+		if sourceStart < entry.srcStart && entry.srcStart < sourceEnd && sourceEnd < (entry.srcStart+entry.r) {
+			ranges = append(ranges, [2]int{entry.destStart, sourceEnd - entry.srcStart})
+			continue
+		}
+
+		// Situation 2
+		if sourceStart < entry.srcStart && entry.srcStart < (entry.srcStart+entry.r) && (entry.srcStart+entry.r) < sourceEnd {
+			ranges = append(ranges, [2]int{entry.destStart, entry.r})
+			continue
+		}
+
+		// Situation 3
+		if entry.srcStart < sourceStart && sourceStart < (entry.srcStart+entry.r) && (entry.srcStart+entry.r) < sourceEnd {
+			offset := sourceStart - entry.srcStart
+			ranges = append(ranges, [2]int{entry.destStart + offset, entry.r - offset})
+			continue
+		}
+
+		// Situation 4
+		if entry.srcStart < sourceStart && sourceStart < sourceEnd && sourceEnd < (entry.srcStart+entry.r) {
+			offset := sourceStart - entry.srcStart
+			ranges = append(ranges, [2]int{entry.destStart + offset, r})
+			continue
+		}
+	}
+
+	return ranges
 }
 
 func challenge5a(input string) int {
@@ -76,10 +111,8 @@ func challenge5a(input string) int {
 		dest:    cDestination,
 		entries: entries,
 	}
-	fmt.Println("Successfully loaded almanac")
 
 	current := "seed"
-	fmt.Println(seeds)
 	for current != "location" {
 		currentMap := almanac[current]
 		for i, seed := range seeds {
@@ -139,51 +172,31 @@ func challenge5b(input string) int {
 		dest:    cDestination,
 		entries: entries,
 	}
-	fmt.Println("Successfully loaded almanac")
 
 	seedsInput := convertToInts(strings.Split(lines[0], ": ")[1])
-	var seeds []int
-	var seedRange []int
+	//var seeds []int
+	var seedRanges [][2]int
+	// Load seedRanges
 	for i := 0; i < len(seedsInput); i = i + 2 {
-		fmt.Println("Load next set of seeds")
-		start := seedsInput[i]
-		r := seedsInput[i+1]
-		for j := start; j < start+r; j++ {
-			seedRange = append(seedRange, j)
-		}
-
-		fmt.Println("Loaded set of seeds")
-
-		current := "seed"
-		for current != "location" {
-			currentMap := almanac[current]
-			for i, seed := range seedRange {
-				seedRange[i] = currentMap.getDestination(seed)
-			}
-			current = currentMap.dest
-		}
-
-		lowest := 9223372036854775807
-		for _, seed := range seedRange {
-			if seed > 0 && seed < lowest {
-				lowest = seed
-			}
-		}
-
-		seeds = append(seeds, lowest)
-		seedRange = []int{}
-
-		fmt.Printf("Got answer for pair %v of %v: %v\n", i/2, len(seedsInput)/2, lowest)
-		fmt.Printf("Current seeds array: %v\n", seeds)
+		seedRanges = append(seedRanges, [2]int{seedsInput[i], seedsInput[i+1]})
 	}
-	fmt.Println("Loaded all seeds")
 
-	fmt.Println(seeds)
+	current := "seed"
+	for current != "location" {
+		currentMap := almanac[current]
+		var seedRangeNext [][2]int
+		for _, seedRange := range seedRanges {
+			seedRangeNext = append(seedRangeNext, currentMap.getDestinationRange(seedRange[0], seedRange[1])...)
+		}
+		current = currentMap.dest
+
+		seedRanges = seedRangeNext
+	}
 
 	lowest := 2147483647
-	for _, seed := range seeds {
-		if seed < lowest {
-			lowest = seed
+	for _, R := range seedRanges {
+		if R[0] < lowest {
+			lowest = R[0]
 		}
 	}
 	return lowest
