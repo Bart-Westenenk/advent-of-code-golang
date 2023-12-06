@@ -71,7 +71,7 @@ func main() {
 			log.Fatal("[!] Requesting day outside the challenge interval")
 		}
 
-		if year == now.Year() && now.Month() == 12 && (day > now.Day() || now.Hour() < 6) {
+		if year == now.Year() && now.Month() == 12 && (day > now.Day() || (day == now.Day() && now.Hour() < 6)) {
 			log.Fatal("[!] Requesting unreleased challenge")
 		}
 	}
@@ -117,6 +117,7 @@ func main() {
 				fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part+1, answer)
 			} else {
 				totalTime += t
+				fmt.Printf("Answer year %v day %v part %v: %v\n", year, day, part+1, answer)
 				fmt.Printf("Calculated day %v p%v in %v seconds\n", day, part+1, float64(t)/1000000000)
 			}
 

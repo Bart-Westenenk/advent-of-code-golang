@@ -1,7 +1,6 @@
 package year2023
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -18,9 +17,7 @@ func challenge3a(input string) int {
 	inputArray := strings.Split(input, "\n")
 	answer := 0
 	width := len(inputArray[0])
-	fmt.Printf("Max width: %v\n", width)
 	length := len(inputArray)
-	fmt.Printf("Max length: %v\n", length)
 
 	var number []int32
 	var coordsToCheck [][2]int
@@ -64,12 +61,8 @@ func challenge3a(input string) int {
 
 				for _, possibleSymbol := range sanitizedCoords {
 					c := rune(inputArray[possibleSymbol[0]][possibleSymbol[1]])
-					if c != '.' {
-						fmt.Printf("Considering symbol: %v at %v\n", strconv.QuoteRune(c), possibleSymbol)
-					}
 					if c != '.' && !unicode.IsNumber(c) {
 						answer += numberInt
-						fmt.Printf("Add number: %v\n", numberInt)
 						break
 					}
 				}
@@ -83,9 +76,7 @@ func challenge3b(input string) int {
 	inputArray := strings.Split(input, "\n")
 	answer := 0
 	width := len(inputArray[0])
-	fmt.Printf("Max width: %v\n", width)
 	length := len(inputArray)
-	fmt.Printf("Max length: %v\n", length)
 
 	var number []int32
 	var coordsToCheck [][2]int
@@ -133,7 +124,6 @@ func challenge3b(input string) int {
 					c := rune(inputArray[possibleSymbol[0]][possibleSymbol[1]])
 					if c == '*' {
 						gears[possibleSymbol] = append(gears[possibleSymbol], numberInt)
-						fmt.Printf("Add number %v to gear at: %v\n", numberInt, possibleSymbol)
 						break
 					}
 				}
