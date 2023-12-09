@@ -2,7 +2,6 @@ package year2023
 
 import (
 	"bartwestenenk/aoc/utils"
-	"fmt"
 	"golang.org/x/exp/slices"
 	"sort"
 	"strconv"
@@ -18,10 +17,9 @@ func GetDay7() [2]func(input string) int {
 }
 
 type hand struct {
-	cards    string
-	cardsMap map[string]int
-	kinds    []int
-	bid      int
+	cards string
+	kinds []int
+	bid   int
 }
 
 func (h hand) is5ofaKind() bool {
@@ -120,14 +118,72 @@ func (h1 hand) Less(h2 hand) bool {
 	return false
 }
 
+func (h1 hand) Less2(h2 hand) bool {
+	comboScore1 := h1.getComboScore()
+	comboScore2 := h2.getComboScore()
+
+	// Decide first based on the comboScore
+	if comboScore1 != comboScore2 {
+		return comboScore1 < comboScore2
+	}
+
+	// Decide on based on the card values
+	for i := 0; i < len(h1.cards); i++ {
+		c1 := h1.cards[i]
+		c2 := h2.cards[i]
+
+		// If they are the same, check the next card
+		if c1 == c2 {
+			continue
+		}
+
+		// Joker has a special role in this comparison, as the Joker is now considered the lowest card
+		if c1 == 'J' {
+			return true
+		} else if c2 == 'J' {
+			return false
+		}
+
+		// If one is digit and the other is a letter, letter wins
+		if unicode.IsDigit(rune(c1)) == unicode.IsLetter(rune(c2)) {
+			return !unicode.IsLetter(rune(c1))
+		}
+
+		// Use int value to compare if they are both digits
+		if unicode.IsDigit(rune(c1)) {
+			i1, _ := strconv.Atoi(string(c1))
+			i2, _ := strconv.Atoi(string(c2))
+
+			return i1 < i2
+		}
+
+		convMap := map[rune]int{
+			'A': 5,
+			'K': 4,
+			'Q': 3,
+			'T': 1,
+		}
+
+		// Use letter conversion and compare
+		if unicode.IsLetter(rune(c1)) {
+			return convMap[rune(c1)] < convMap[rune(c2)]
+		}
+	}
+	return false
+}
+
 func challenge7a(input string) int {
 	lines := utils.SplitLines(input)
-	hands := []hand{}
+	var hands []hand
 	answer := 0
 	for _, line := range lines {
 		splitLine := strings.Split(line, " ")
 		bid, _ := strconv.Atoi(splitLine[1])
 		cardsMap := make(map[string]int)
+		for _, card := range splitLine[0] {
+			cardsMap[string(card)]++
+		}
+
 		var kinds []int
 		for _, amount := range cardsMap {
 			kinds = append(kinds, amount)
@@ -136,20 +192,15 @@ func challenge7a(input string) int {
 		slices.Reverse(kinds)
 
 		hands = append(hands, hand{
-			cards:    splitLine[0],
-			cardsMap: cardsMap,
-			kinds:    kinds,
-			bid:      bid,
+			cards: splitLine[0],
+			kinds: kinds,
+			bid:   bid,
 		})
 	}
 
 	sort.Slice(hands, func(i, j int) bool {
 		return hands[i].Less(hands[j])
 	})
-
-	for _, h := range hands {
-		fmt.Printf("%v: %v - %v\n", h.cards, h.getComboScore(), h.kinds)
-	}
 
 	for i, h := range hands {
 		answer += (i + 1) * h.bid
@@ -159,6 +210,52 @@ func challenge7a(input string) int {
 }
 
 func challenge7b(input string) int {
+	lines := utils.SplitLines(input)
+	hands := []hand{}
 	answer := 0
+	for _, line := range lines {
+		splitLine := strings.Split(line, " ")
+		bid, _ := strconv.Atoi(splitLine[1])
+		cardsMap := make(map[string]int)
+		jokers := 0
+		for _, card := range splitLine[0] {
+			if card == 'J' {
+				jokers++
+			} else {
+				cardsMap[string(card)]++
+			}
+		}
+
+		var kinds []int
+		for _, amount := range cardsMap {
+			kinds = append(kinds, amount)
+		}
+		slices.Sort(kinds)
+		slices.Reverse(kinds)
+
+		// Add the Jokers to the highest kind
+		if len(kinds) > 0 {
+			kinds[0] += jokers
+		} else {
+			kinds = []int{jokers}
+		}
+
+		hands = append(hands, hand{
+			cards: splitLine[0],
+			kinds: kinds,
+			bid:   bid,
+		})
+	}
+
+	sort.Slice(hands, func(i, j int) bool {
+		return hands[i].Less2(hands[j])
+	})
+
+	for i, h := range hands {
+		answer += (i + 1) * h.bid
+	}
+
+	//fmt.Println(hands)
+
 	return answer
 }
