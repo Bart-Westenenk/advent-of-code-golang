@@ -25,8 +25,6 @@ func challenge9a(input string) int {
 	return answer
 }
 
-// TOO HIGH: 1992280294
-
 func extrapolate(deltaArray []int) int {
 	var newDelta []int
 	allZero := slices.Max(deltaArray) == slices.Min(deltaArray)
@@ -45,36 +43,41 @@ func extrapolate(deltaArray []int) int {
 }
 
 func extrapolateBackwards(input []int) int {
-	var deltaArray []int
+	// Base case
 	allZero := true
-	for i := len(input) - 1; i > 0; i-- {
-		delta := input[i] - input[i-1]
-		deltaArray = append(deltaArray, delta)
-		if delta != 0 {
+	for _, i := range input {
+		if i != 0 {
 			allZero = false
+			break
 		}
 	}
 
 	if allZero {
+		fmt.Println("Base case")
 		return 0
+	}
+
+	var deltaArray []int
+	for i := len(input) - 1; i > 0; i-- {
+		delta := input[i] - input[i-1]
+		deltaArray = append(deltaArray, delta)
 	}
 
 	slices.Reverse(deltaArray)
 
-	fmt.Println(input)
 	// We are not to all zeroes, so keep extrapolating backwards
-	return input[0] - extrapolateBackwards(deltaArray)
+	answer := input[0] - extrapolateBackwards(deltaArray)
+	fmt.Printf("%v <- %v\n", answer, input)
+	return answer
 }
 
 func challenge9b(input string) int {
 	answer := 0
 	lines := utils.SplitLines(input)
 	for _, line := range lines {
-		fmt.Println("NEW ENTRY")
-
 		ints := convertToInts(line)
 		//fmt.Printf("input: %v\n", ints)
-		inc := ints[0] - extrapolateBackwards(ints)
+		inc := extrapolateBackwards(ints)
 		answer += inc
 	}
 	return answer
