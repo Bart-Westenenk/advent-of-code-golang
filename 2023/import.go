@@ -13,6 +13,7 @@ func GetSolutions() [][2]func(input string) int {
 		year2023.GetDay7(),
 		year2023.GetDay8(),
 		year2023.GetDay9(),
+		year2023.GetDay10(),
 	}
 	return solutions
 }
